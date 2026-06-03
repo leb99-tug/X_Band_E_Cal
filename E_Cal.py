@@ -435,7 +435,7 @@ def find_calibration_lengths(
     # --- Bounds-Default ---
     if bounds is None and method in {"de", "de+nm"}:
         bounds = [
-            (max(1e-6, g * 0.1), g *3) if g > 0 else (-0.5, 0.5)
+            (g * 0.5, g * 1.3) if g > 0 else (0, 20)
             for g in initial_guess
         ]
 
