@@ -11,58 +11,6 @@ import skrf as rf
 from skrf.media import RectangularWaveguide
 from E_Cal import xBand_ECal
 
-def complex_bounds_agreement(ref_up, ref_lo, dut_up, dut_lo):
-    """
-    Returns the percentage agreement between two complex uncertainty bands.
-
-    At each frequency point, each pair of bounds defines a rectangle in the
-    complex plane (real-axis interval x imaginary-axis interval).  Agreement
-    is measured as the Jaccard index (intersection area / union area) of those
-    two rectangles, averaged over all frequencies and converted to percent.
-
-    Parameters
-    ----------
-    ref_up, ref_lo : rf.Network or array-like (complex)
-        Upper / lower bounds of the reference.
-    dut_up, dut_lo : rf.Network or array-like (complex)
-        Upper / lower bounds of the DUT.
-
-    Returns
-    -------
-    float
-        Mean Jaccard agreement in percent (0 – 100).
-    """
-    def _s11(x):
-        return x.s[:, 0, 0] if hasattr(x, 's') else np.asarray(x).ravel()
-
-    ru, rl = _s11(ref_up), _s11(ref_lo)
-    du, dl = _s11(dut_up), _s11(dut_lo)
-
-    # Ensure lo <= hi for both real and imaginary axes
-    r_re_lo, r_re_hi = np.minimum(rl.real, ru.real), np.maximum(rl.real, ru.real)
-    r_im_lo, r_im_hi = np.minimum(rl.imag, ru.imag), np.maximum(rl.imag, ru.imag)
-    d_re_lo, d_re_hi = np.minimum(dl.real, du.real), np.maximum(dl.real, du.real)
-    d_im_lo, d_im_hi = np.minimum(dl.imag, du.imag), np.maximum(dl.imag, du.imag)
-
-    # Rectangle intersection
-    inter_re = np.maximum(0.0, np.minimum(r_re_hi, d_re_hi) - np.maximum(r_re_lo, d_re_lo))
-    inter_im = np.maximum(0.0, np.minimum(r_im_hi, d_im_hi) - np.maximum(r_im_lo, d_im_lo))
-    inter_area = inter_re * inter_im
-
-    # Areas and union
-    ref_area = (r_re_hi - r_re_lo) * (r_im_hi - r_im_lo)
-    dut_area = (d_re_hi - d_re_lo) * (d_im_hi - d_im_lo)
-    union_area = ref_area + dut_area - inter_area
-
-    # Jaccard per frequency; degenerate (zero-area) points score 1 if coincident
-    ref_mid = (ru + rl) / 2
-    dut_mid = (du + dl) / 2
-    coincident = np.isclose(ref_mid.real, dut_mid.real) & np.isclose(ref_mid.imag, dut_mid.imag)
-
-    with np.errstate(invalid='ignore', divide='ignore'):
-        jaccard = np.where(union_area > 0, inter_area / union_area, coincident.astype(float))
-
-    return float(np.mean(jaccard) * 100)
 
 
 def vector_error_magnitude(ref_mean, dut_mean):
@@ -87,7 +35,7 @@ def vector_error_magnitude(ref_mean, dut_mean):
         a = np.asarray(x)
         return a[:, 0, 0] if a.ndim == 3 else a.ravel()
 
-    return 20 * np.log10(np.abs(_s11(ref_mean) - _s11(dut_mean)))-5
+    return 20 * np.log10(np.abs(_s11(ref_mean) - _s11(dut_mean)))
 
 
 #Initialize waveguide and standards
@@ -147,7 +95,7 @@ dut_ref = ref_cal.apply_cal(match_std.s11)
 dut = cal.apply_cal(match_std.s11)
 
 #dut = rf.Network(s=munc.get_value(dut), frequency=freq)
-
+'''
 ref_up = rf.Network(s=((munc.get_value(dut_ref)) + munc.get_stdunc(dut_ref)), frequency=freq)
 ref_lo = rf.Network(s=((munc.get_value(dut_ref)) - munc.get_stdunc(dut_ref)), frequency=freq)
 
@@ -158,39 +106,43 @@ dut = rf.Network(s=munc.get_value(dut), frequency=freq)
 
 dut_ref = rf.Network(s=munc.get_value(dut_ref), frequency=freq)
 
-print(f"Complex agreement between DUT and reference uncertainty bands: {complex_bounds_agreement(ref_up, ref_lo, dut_up, dut_lo):.1f}%")
-
-print((vector_error_magnitude(dut_ref, dut)))
 plt.figure(figsize=(6, 3))
 plt.plot(f, vector_error_magnitude(dut_ref, dut), label='Error Vector Magnitude (dB)')
-plt.xlabel('Frequency (Hz)')
+plt.hlines(-20, f[0], f[-1], colors='red', linestyles='dashed', label='-20 dB Threshold')
+plt.xlabel('Frequency (GHz)')
 plt.ylabel('Error Vector Magnitude (dB)')
-plt.xticks([8e9, 9e9, 10e9, 11e9, 12e9], ['8 GHz', '9 GHz', '10 GHz', '11 GHz', '12 GHz'])
+plt.xticks([8e9, 9e9, 10e9, 11e9, 12e9], ['8', '9', '10', '11', '12'])
 plt.tight_layout()
+plt.legend()
 plt.grid()
 plt.savefig('EVM.svg')
-
-
-'''
-dut_up.plot_s_smith(label='Calibrated $\sigma$', color='blue')
-dut_lo.plot_s_smith(label='Calibrated $\sigma$', color='blue')
-
-dut.plot_s_smith(label='Calibrated Mean', color='green')
-dut_ref.plot_s_smith(label='Reference Mean', color='orange')
-
-ref_up.plot_s_smith(label='$\sigma$ Bound', color='red')
-ref_lo.plot_s_smith(label='$\sigma$ Bound', color='red')
-
-'''
 plt.show()
 '''
-plt.plot(f,(20*np.log10(np.abs(munc.get_value(dut)))), label='de-embedded')
-plt.plot(f,(20*np.log10(np.abs(dut_ref.s[:,0,0]))), label='reference')
-plt.fill_between(f,(20*np.log10(np.abs(munc.get_value(dut))-np.abs(munc.get_stdunc(dut)))), (20*np.log10(np.abs(munc.get_value(dut))+np.abs(munc.get_stdunc(dut)))), color='grey', alpha=0.5, label='uncertainty')
-#plt.fill_between(f,(20*np.log10(np.abs(munc.get_value(dut_ref))-np.abs(munc.get_stdunc(dut_ref)))), (20*np.log10(np.abs(munc.get_value(dut_ref))+np.abs(munc.get_stdunc(dut_ref)))), color='blue', alpha=0.5, label='uncertainty')
+
+'''
+#dut_up.plot_s_smith(label='Calibrated $\sigma$', color='blue')
+#dut_lo.plot_s_smith(label='Calibrated $\sigma$', color='blue')
+
+dut.plot_s_db(label='Calibrated Mean', color='green')
+#dut_ref.plot_s_smith(label='Reference Mean', color='orange')
+
+ref_up.plot_s_db(label='$\sigma$ Reference', color='red')
+ref_lo.plot_s_db(label='$\sigma$ Reference', color='red')
+plt.tight_layout()
 plt.legend()
-plt.xlabel('Frequency (Hz)')
-plt.ylabel('Magnitude of Reflection Coefficient (dB)')
-plt.grid()
+plt.savefig('Smith.svg')
 plt.show()
 '''
+plt.figure(figsize=(6, 3))
+plt.plot(f,(20*np.log10(np.abs(munc.get_value(dut)))), label='Measured (Auto-Cal-Unit)', color='blue')
+#plt.plot(f,(20*np.log10(np.abs(dut_ref.s[:,0,0]))), label='reference')
+#plt.fill_between(f,(20*np.log10(np.abs(munc.get_value(dut))-np.abs(munc.get_stdunc(dut)))), (20*np.log10(np.abs(munc.get_value(dut))+np.abs(munc.get_stdunc(dut)))), color='grey', alpha=0.5, label='uncertainty')
+plt.fill_between(f,(20*np.log10(np.abs(munc.get_value(dut_ref))-np.abs(munc.get_stdunc(dut_ref)))), (20*np.log10(np.abs(munc.get_value(dut_ref))+np.abs(munc.get_stdunc(dut_ref)))), color='grey', alpha=0.5, label='$\pm\sigma$ Reference')
+plt.legend()
+plt.xlabel('Frequency (GHz)')
+plt.ylabel('Magnitude (dB)')
+plt.xticks([8e9, 9e9, 10e9, 11e9, 12e9], ['8', '9', '10', '11', '12'])
+plt.grid()
+plt.tight_layout()
+plt.savefig('UNC.svg')
+plt.show()
