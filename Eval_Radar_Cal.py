@@ -38,72 +38,82 @@ def vector_error_magnitude(ref_mean, dut_mean):
     return 20 * np.log10(np.abs(_s11(ref_mean) - _s11(dut_mean)))
 
 
-#Initialize waveguide and standards
+# --- Load reference and measured standards (folder = measurement date 090626) ---
 
+# Reference verification short (zero offset): used as the "truth" standard
+ref_short = rf.Network('090626/Ver_0.s1p')["8.4-12.5GHz"]
 
-ref_short = rf.Network('090626/Ver_0.s1p')["8.4-12.5GHz"]#["8.4-12GHz"]
-
-
-ref_short_l8 = rf.Network('090626/Ver_375.s1p')["8.4-12.5GHz"]
-ref_short_l4 = rf.Network('090626/Ver_750.s1p')["8.4-12.5GHz"]
+# Reference offset shorts at λ/8 steps (375, 750, 1125 µm) — VNA-measured verification standards
+ref_short_l8  = rf.Network('090626/Ver_375.s1p')["8.4-12.5GHz"]
+ref_short_l4  = rf.Network('090626/Ver_750.s1p')["8.4-12.5GHz"]
 ref_short_3l8 = rf.Network('090626/Ver_1125.s1p')["8.4-12.5GHz"]
 
-meas_short = rf.Network('090626/calkit_l0.s1p')["8.4-12.5GHz"]
+# Auto-cal-unit (ECal device) measurements: flush short + three offset shorts
+meas_short   = rf.Network('090626/calkit_l0.s1p')["8.4-12.5GHz"]
 meas_short_1 = rf.Network('090626/calkit_l8.s1p')["8.4-12.5GHz"]
 meas_short_2 = rf.Network('090626/calkit_l4.s1p')["8.4-12.5GHz"]
 meas_short_3 = rf.Network('090626/calkit_3l8.s1p')["8.4-12.5GHz"]
 
-
+# DUT: matched load, used to validate calibration quality after correction
 match_std = rf.Network('090626/Match.s1p')["8.4-12.5GHz"]
 
 
 freq = ref_short.frequency
 f = freq.f
 
-WR90 = rf.RectangularWaveguide(freq,a=22.86E-3,z0=50)
+# WR90 waveguide model (a = 22.86 mm broad wall) with 50 Ω port impedance (used for compliency with touchstone files)
+WR90 = rf.RectangularWaveguide(freq, a=22.86E-3, z0=50)
+# Ideal short: S11 = -1; tiny imaginary part avoids log(0) in uncertainty calculations
 WR90_short = rf.Network(s=(-1-0.000000000001j)*np.ones(len(freq)), frequency=freq, z0=50)
-rho1 = WR90.line(3.75, 'mm')**WR90_short
-rho2 = WR90.line(7.5, 'mm')**WR90_short
-rho3 = WR90.line(11.25, 'mm')**WR90_short
 
-rho1_cal = WR90.line(3.75, 'mm')**WR90_short
-rho2_cal = WR90.line(7.5, 'mm')**WR90_short
-rho3_cal = WR90.line(11.25, 'mm')**WR90_short
+# Ideal offset shorts: waveguide delay line cascaded with the ideal short
+rho1 = WR90.line(3.75,  'mm') ** WR90_short   # λ/8 offset
+rho2 = WR90.line(7.5,   'mm') ** WR90_short   # λ/4 offset
+rho3 = WR90.line(11.25, 'mm') ** WR90_short   # 3λ/8 offset
+
+# Separate copies for the cal run so rho values stay independent of ref_cal
+rho1_cal = WR90.line(3.75,  'mm') ** WR90_short
+rho2_cal = WR90.line(7.5,   'mm') ** WR90_short
+rho3_cal = WR90.line(11.25, 'mm') ** WR90_short
 
 
 
 
-cal = xBand_ECal(standard1=meas_short_1.s11, standard2=meas_short_2.s11, standard3=meas_short_3.s11, rho1=rho1_cal, rho2=rho2_cal, rho3=rho3_cal, 
+# --- E-Cal using the auto-cal-unit measurements ---
+# find_lengths=True: offset lengths are optimised (Nelder-Mead, "nm") because
+# the ECal internal line lengths are not precisely known a priori.
+# Uncertainty variances (σ²) cover noise floor, noise temperature, line length,
+# directivity, tracking, and source-match contributions.
+cal = xBand_ECal(standard1=meas_short_1.s11, standard2=meas_short_2.s11, standard3=meas_short_3.s11, rho1=rho1_cal, rho2=rho2_cal, rho3=rho3_cal,
                 sigma_NF=(0.000001**2)*np.ones(len(freq)), sigma_NT=(0.000025**2)*np.ones(len(freq)), sigma_L=(0.0012**2)*np.ones(len(freq)),
                 sigma_DD=(0.002**2)*np.ones(len(freq)), sigma_DT=(0.0125**2)*np.ones(len(freq)), sigma_DM=(0.025**2)*np.ones(len(freq)),
                 sigma_RR=(0.004**2)*np.ones(len(freq)), sigma_RT=(0.0000001**2)*np.ones(len(freq)), sigma_RM=(0.004**2)*np.ones(len(freq)),
                 sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=True, find_lengths_options="nm",
-                enhanced_console_output=True,initial_guess=[3.75, 7.5 , 11.25], ref_standard=meas_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
+                enhanced_console_output=True, initial_guess=[3.75, 7.5, 11.25], ref_standard=meas_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
 
-
-#ref_cal = rf.calibration.OnePort(measured=[ref_short_l8.s11, ref_short_l4.s11, ref_short_3l8.s11], ideals=[rho1, rho2, rho3])
-
-ref_cal = xBand_ECal(standard1=ref_short_l8.s11, standard2=ref_short_l4.s11, standard3=ref_short_3l8.s11, rho1=rho1, rho2=rho2, rho3=rho3, 
+# --- Reference E-Cal using verification standards (known lengths, find_lengths=False) ---
+# Line lengths are fixed at nominal values; used as the gold-standard correction
+# for comparison against the auto-cal-unit result.
+ref_cal = xBand_ECal(standard1=ref_short_l8.s11, standard2=ref_short_l4.s11, standard3=ref_short_3l8.s11, rho1=rho1, rho2=rho2, rho3=rho3,
                 sigma_NF=(0.000001**2)*np.ones(len(freq)), sigma_NT=(0.000025**2)*np.ones(len(freq)), sigma_L=(0.0012**2)*np.ones(len(freq)),
                 sigma_DD=(0.002**2)*np.ones(len(freq)), sigma_DT=(0.0125**2)*np.ones(len(freq)), sigma_DM=(0.025**2)*np.ones(len(freq)),
                 sigma_RR=(0.004**2)*np.ones(len(freq)), sigma_RT=(0.0000001**2)*np.ones(len(freq)), sigma_RM=(0.004**2)*np.ones(len(freq)),
                 sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=False, find_lengths_options="de",
-                enhanced_console_output=True,initial_guess=[3.75, 7.5, 11.25], ref_standard=ref_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
+                enhanced_console_output=True, initial_guess=[3.75, 7.5, 11.25], ref_standard=ref_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
 
-
-#run E-Calibration
+# Run both calibrations (solves for error terms + propagates uncertainties)
 cal.run()
 ref_cal.run()
 
 
-dut_ref = ref_cal.apply_cal(match_std.s11)
-dut = cal.apply_cal(match_std.s11)
+# Apply calibration corrections to the matched load (DUT) using both cal sets
+dut_ref = ref_cal.apply_cal(match_std.s11)  # corrected with reference (verification) cal
+dut     = cal.apply_cal(match_std.s11)      # corrected with auto-cal-unit cal
 
-
+# --- Plot: S11 magnitude of auto-cal-unit result + reference ±1σ band ---
 plt.figure(figsize=(6, 3))
 plt.plot(f,(20*np.log10(np.abs(munc.get_value(dut)))), label='Measured (Auto-Cal-Unit)', color='blue')
-#plt.plot(f,(20*np.log10(np.abs(dut_ref.s[:,0,0]))), label='reference')
-#plt.fill_between(f,(20*np.log10(np.abs(munc.get_value(dut))-np.abs(munc.get_stdunc(dut)))), (20*np.log10(np.abs(munc.get_value(dut))+np.abs(munc.get_stdunc(dut)))), color='grey', alpha=0.5, label='uncertainty')
+# Grey band = ±1σ from reference calibration; shows whether auto-cal falls within reference uncertainty
 plt.fill_between(f,(20*np.log10(np.abs(munc.get_value(dut_ref))-np.abs(munc.get_stdunc(dut_ref)))), (20*np.log10(np.abs(munc.get_value(dut_ref))+np.abs(munc.get_stdunc(dut_ref)))), color='grey', alpha=0.5, label='$\pm\sigma$ Reference')
 plt.legend()
 plt.xlabel('Frequency (GHz)')

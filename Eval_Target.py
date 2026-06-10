@@ -22,7 +22,7 @@ meas_short_2 = rf.Network('090626/calkit_l4.s1p')["8.4-12.5GHz"]
 meas_short_3 = rf.Network('090626/calkit_3l8.s1p')["8.4-12.5GHz"]
 
 
-target = rf.Network('090626/target125.s1p')["8.4-12.5GHz"]
+target = rf.Network('090626/target175.s1p')["8.4-12.5GHz"]
 
 
 freq = ref_short.frequency
@@ -30,13 +30,11 @@ f = freq.f
 
 WR90 = rf.RectangularWaveguide(freq,a=22.86E-3,z0=50)
 WR90_short = rf.Network(s=(-1-0.000000000001j)*np.ones(len(freq)), frequency=freq, z0=50)
-rho1 = WR90.line(3.75, 'mm')**WR90_short
-rho2 = WR90.line(7.5, 'mm')**WR90_short
-rho3 = WR90.line(11.25, 'mm')**WR90_short
 
-rho1_cal = WR90.line(3.75, 'mm')**WR90_short
-rho2_cal = WR90.line(7.5, 'mm')**WR90_short
-rho3_cal = WR90.line(11.25, 'mm')**WR90_short
+
+rho1_cal = WR90.line(3.79302482, 'mm')**WR90_short
+rho2_cal = WR90.line(7.4010261, 'mm')**WR90_short
+rho3_cal = WR90.line(11.31874477, 'mm')**WR90_short
 
 
 
@@ -57,8 +55,8 @@ dut = cal.apply_cal(target.s11)
 
 
 dut = rf.Network(s=munc.get_value(dut), frequency=freq)
-target.plot_s_deg_unwrap(label="Uncalibrated")
-dut.plot_s_deg_unwrap(label="Calibrated")
+target.plot_s_time(label="Uncalibrated")
+dut.plot_s_time(label="Calibrated")
 xlim = (0, 40)
-#plt.xlim(xlim)
+plt.xlim(xlim)
 plt.show()
