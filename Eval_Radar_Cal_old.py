@@ -62,13 +62,13 @@ f = freq.f
 
 WR90 = rf.RectangularWaveguide(freq,a=22.86E-3,z0=50)
 WR90_short = rf.Network(s=(-1-0.000000000001j)*np.ones(len(freq)), frequency=freq, z0=50)
-rho1 = WR90.line(3.75, 'mm')**WR90_short
-rho2 = WR90.line(7.5, 'mm')**WR90_short
-rho3 = WR90.line(11.25, 'mm')**WR90_short
+rho1 = WR90.line(3.614239, 'mm')**WR90_short
+rho2 = WR90.line(7.360389, 'mm')**WR90_short
+rho3 = WR90.line(11.338666, 'mm')**WR90_short
 
-rho1_cal = WR90.line(3.75, 'mm')**WR90_short
-rho2_cal = WR90.line(7.5, 'mm')**WR90_short
-rho3_cal = WR90.line(11.25, 'mm')**WR90_short
+rho1_cal = WR90.line(3.79302482, 'mm')**WR90_short
+rho2_cal = WR90.line(7.4010261, 'mm')**WR90_short
+rho3_cal = WR90.line(11.31874477, 'mm')**WR90_short
 
 
 
@@ -77,7 +77,7 @@ cal = xBand_ECal(standard1=meas_short_1.s11, standard2=meas_short_2.s11, standar
                 sigma_NF=(0.000001**2)*np.ones(len(freq)), sigma_NT=(0.000025**2)*np.ones(len(freq)), sigma_L=(0.0012**2)*np.ones(len(freq)),
                 sigma_DD=(0.002**2)*np.ones(len(freq)), sigma_DT=(0.0125**2)*np.ones(len(freq)), sigma_DM=(0.025**2)*np.ones(len(freq)),
                 sigma_RR=(0.004**2)*np.ones(len(freq)), sigma_RT=(0.0000001**2)*np.ones(len(freq)), sigma_RM=(0.004**2)*np.ones(len(freq)),
-                sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=True, find_lengths_options="nm",
+                sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=False, find_lengths_options="nm",
                 enhanced_console_output=True,initial_guess=[3.75, 7.25 , 11.25], ref_standard=meas_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
 
 
@@ -87,7 +87,7 @@ ref_cal = xBand_ECal(standard1=ref_short_l8.s11, standard2=ref_short_l4.s11, sta
                 sigma_NF=(0.000001**2)*np.ones(len(freq)), sigma_NT=(0.000025**2)*np.ones(len(freq)), sigma_L=(0.0012**2)*np.ones(len(freq)),
                 sigma_DD=(0.002**2)*np.ones(len(freq)), sigma_DT=(0.0125**2)*np.ones(len(freq)), sigma_DM=(0.025**2)*np.ones(len(freq)),
                 sigma_RR=(0.004**2)*np.ones(len(freq)), sigma_RT=(0.0000001**2)*np.ones(len(freq)), sigma_RM=(0.004**2)*np.ones(len(freq)),
-                sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=False, find_lengths_options="de",
+                sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=False, find_lengths_options="nm",
                 enhanced_console_output=True,initial_guess=[3.75, 7.5, 11.25], ref_standard=ref_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
 
 
@@ -98,7 +98,7 @@ ref_cal.run()
 
 dut_ref = ref_cal.apply_cal(match_std.s11)
 dut = cal.apply_cal(match_std.s11)
-
+'''
 #dut = rf.Network(s=munc.get_value(dut), frequency=freq)
 
 ref_up = rf.Network(s=((munc.get_value(dut_ref)) + munc.get_stdunc(dut_ref)), frequency=freq)
@@ -123,7 +123,7 @@ plt.grid()
 plt.savefig('EVM.svg')
 plt.show()
 
-'''
+
 
 #dut_up.plot_s_smith(label='Calibrated $\sigma$', color='blue')
 #dut_lo.plot_s_smith(label='Calibrated $\sigma$', color='blue')
@@ -137,7 +137,7 @@ plt.tight_layout()
 plt.legend()
 plt.savefig('Smith.svg')
 plt.show()
-
+'''
 plt.figure(figsize=(6, 3))
 plt.plot(f,(20*np.log10(np.abs(munc.get_value(dut)))), label='Measured (Auto-Cal-Unit)', color='blue')
 #plt.plot(f,(20*np.log10(np.abs(dut_ref.s[:,0,0]))), label='reference')
@@ -151,4 +151,4 @@ plt.grid()
 plt.tight_layout()
 plt.savefig('UNC.svg')
 plt.show()
-'''
+

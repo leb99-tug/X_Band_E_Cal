@@ -382,11 +382,10 @@ def find_calibration_lengths(
         raise ValueError(
             f"method must be 'nm', 'de', or 'de+nm', got {method!r}"
         )
-
+    DEG_PER_RAD = 180 / np.pi
     # --- Invarianten einmalig binden ---
     measured = [standard1.s11, standard2.s11, standard3.s11]
     ref_meas = ref_standard.s11
-    DEG_PER_RAD = 180.0 / np.pi
     # --- Zielfunktion ---
     def goal_function(l):
         rho1 = Waveguide.line(l[0], 'mm') ** ref_standard_rho
@@ -401,12 +400,10 @@ def find_calibration_lengths(
         DUT = cal.apply_cal(ref_meas)
         
         
-        ratio = np.unwrap(np.unwrap(np.angle(ref_standard_rho.s.squeeze()),period=10*np.pi)-np.angle(DUT.s.squeeze()),period=10*np.pi) # / DUT
-        err = float(np.sum(ratio**2))
-        #phase_diff = np.unwrap(np.angle(ref_standard_rho.s.squeeze() / DUT.s.squeeze())) * DEG_PER_RAD
-        #err = float(np.sum(phase_diff**2))
-        #diff = ref_standard_rho.s.squeeze() / DUT.s.squeeze()
-        #err = float(np.sum(diff.real**2 + diff.imag**2))
+        angle_dut = np.unwrap(np.angle(DUT.s.squeeze(),deg=True),discont=-180)
+        angle_ref = np.unwrap(np.angle(ref_standard_rho.s.squeeze(),deg=True),discont=-180)
+        err = np.sum((angle_ref-angle_dut)**2)
+
 
 
         if enhanced_console_output:
@@ -437,7 +434,7 @@ def find_calibration_lengths(
     n = len(initial_guess)
 
     # --- Bounds-Default ---
-    if bounds is None and method in {"de", "de+nm","nm"}:
+    if bounds is None and method in {"de", "de+nm"}:
         bounds = [
             (g * 0.7, g * 1.3) if g > 0 else (0, 20)
             for g in initial_guess

@@ -6,10 +6,10 @@ import pandas as pd
 import os
 from scipy import linalg,signal
 from scipy.optimize import minimize
-import metas_unclib as munc
+import metas_unclib as munc  # METAS uncertainty library for GUM-compliant propagation
 import skrf as rf
 from skrf.media import RectangularWaveguide
-from E_Cal import xBand_ECal
+from E_Cal import xBand_ECal  # X-band E-Cal algorithm with uncertainty propagation
 
 
 
@@ -77,8 +77,8 @@ cal = xBand_ECal(standard1=meas_short_1.s11, standard2=meas_short_2.s11, standar
                 sigma_NF=(0.000001**2)*np.ones(len(freq)), sigma_NT=(0.000025**2)*np.ones(len(freq)), sigma_L=(0.0012**2)*np.ones(len(freq)),
                 sigma_DD=(0.002**2)*np.ones(len(freq)), sigma_DT=(0.0125**2)*np.ones(len(freq)), sigma_DM=(0.025**2)*np.ones(len(freq)),
                 sigma_RR=(0.004**2)*np.ones(len(freq)), sigma_RT=(0.0000001**2)*np.ones(len(freq)), sigma_RM=(0.004**2)*np.ones(len(freq)),
-                sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=True, find_lengths_options="de+nm",
-                enhanced_console_output=True,initial_guess=[3.75, 7.25 , 11.25], ref_standard=meas_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
+                sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=True, find_lengths_options="nm",
+                enhanced_console_output=True,initial_guess=[3.75, 7.5 , 11.25], ref_standard=meas_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
 
 
 #ref_cal = rf.calibration.OnePort(measured=[ref_short_l8.s11, ref_short_l4.s11, ref_short_3l8.s11], ideals=[rho1, rho2, rho3])
