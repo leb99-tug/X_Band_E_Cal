@@ -120,7 +120,7 @@ if __name__ == "__main__":
     print("Initializing...")
     mz.set_force(True)
     
-    positions = [4100]
+    positions = [360]
     speeds = [8]
 
     try:

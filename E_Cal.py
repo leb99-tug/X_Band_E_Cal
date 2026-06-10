@@ -52,8 +52,8 @@ def get_noise_lin_unc_matrix(sigma_NF,sigma_NT,sigma_L,freq):
     """    
     nl = []
     for inx in range(len(freq)):    
-        nl_00 = munc.ucomplex(value=0, covariance=[[sigma_NF[inx]/(10*np.sqrt(2)),0],[0,sigma_NF[inx]/(10*np.sqrt(2))]])  
-        nl_01 = munc.ucomplex(value=1, covariance=[[sigma_NT[inx]/(10*np.sqrt(2))+sigma_L[inx]/(10*np.sqrt(2)),0],[0,sigma_NT[inx]/(10*np.sqrt(2))+sigma_L[inx]/(10*np.sqrt(2))]])  
+        nl_00 = munc.ucomplex(value=0, covariance=[[sigma_NF[inx],0],[0,sigma_NF[inx]]])  
+        nl_01 = munc.ucomplex(value=1, covariance=[[sigma_NT[inx]+sigma_L[inx],0],[0,sigma_NT[inx]+sigma_L[inx]]])  
         nl_10 = munc.ucomplex(value=1, covariance=[[0,0],[0,0]])
         nl_11 = munc.ucomplex(value=0, covariance=[[0,0],[0,0]])
         _nl = np.array([[nl_00, nl_01],[nl_10, nl_11]])
@@ -75,10 +75,10 @@ def get_drift_unc_matrix(sigma_DD,sigma_DT,sigma_DM,freq):
     """    
     dd=[]
     for inx in range(len(freq)):    
-        dd_00 = munc.ucomplex(value=0, covariance=[[sigma_DD[inx]/(np.sqrt(2)),0],[0,sigma_DD[inx]/(np.sqrt(2))]])  
-        dd_01 = munc.ucomplex(value=1, covariance=[[sigma_DT[inx]/(np.sqrt(2)),0],[0,sigma_DT[inx]/(np.sqrt(2))]])  
+        dd_00 = munc.ucomplex(value=0, covariance=[[sigma_DD[inx],0],[0,sigma_DD[inx]]])  
+        dd_01 = munc.ucomplex(value=1, covariance=[[sigma_DT[inx],0],[0,sigma_DT[inx]]])  
         dd_10 = munc.ucomplex(value=1, covariance=[[0,0],[0,0]])
-        dd_11 = munc.ucomplex(value=0, covariance=[[sigma_DM[inx]/(np.sqrt(2)),0],[0,sigma_DM[inx]/(np.sqrt(2))]])
+        dd_11 = munc.ucomplex(value=0, covariance=[[sigma_DM[inx],0],[0,sigma_DM[inx]]])
         _dd = np.array([[dd_00, dd_01],[dd_10, dd_11]])
         dd.append(_dd)
     return dd
@@ -98,10 +98,10 @@ def get_rep_unc_matrix(sigma_RR,sigma_RT,sigma_RM,freq):
     """    
     rep = []
     for inx in range(len(freq)):
-        rep_00 = munc.ucomplex(value=0, covariance=[[sigma_RR[inx]/(np.sqrt(2)),0],[0,sigma_RR[inx]/(np.sqrt(2))]])  
-        rep_01 = munc.ucomplex(value=1, covariance=[[sigma_RT[inx]/(np.sqrt(2)),0],[0,sigma_RT[inx]/(np.sqrt(2))]])  
-        rep_10 = munc.ucomplex(value=1, covariance=[[sigma_RT[inx]/(np.sqrt(2)),0],[0,sigma_RT[inx]/(np.sqrt(2))]])
-        rep_11 = munc.ucomplex(value=0, covariance=[[sigma_RM[inx]/(np.sqrt(2)),0],[0,sigma_RM[inx]/(np.sqrt(2))]])
+        rep_00 = munc.ucomplex(value=0, covariance=[[sigma_RR[inx],0],[0,sigma_RR[inx]]])  
+        rep_01 = munc.ucomplex(value=1, covariance=[[sigma_RT[inx],0],[0,sigma_RT[inx]]])  
+        rep_10 = munc.ucomplex(value=1, covariance=[[sigma_RT[inx],0],[0,sigma_RT[inx]]])
+        rep_11 = munc.ucomplex(value=0, covariance=[[sigma_RM[inx],0],[0,sigma_RM[inx]]])
         _rep = np.array([[rep_00, rep_01],[rep_10, rep_11]])
         rep.append(_rep)
     return rep  
@@ -119,7 +119,7 @@ def get_standard_unc_matrix(sigma_SR,freq):
     """    
     sr = []
     for inx in range(len(freq)):
-        sr_00 = munc.ucomplex(value=0, covariance=[[sigma_SR[inx]/(np.sqrt(2)),0],[0,sigma_SR[inx]/(np.sqrt(2))]])  
+        sr_00 = munc.ucomplex(value=0, covariance=[[sigma_SR[inx],0],[0,sigma_SR[inx]]])  
         sr_01 = munc.ucomplex(value=1, covariance=[[0,0],[0,0]])  
         sr_10 = munc.ucomplex(value=1, covariance=[[0,0],[0,0]])
         sr_11 = munc.ucomplex(value=0, covariance=[[0,0],[0,0]])
@@ -387,7 +387,6 @@ def find_calibration_lengths(
     measured = [standard1.s11, standard2.s11, standard3.s11]
     ref_meas = ref_standard.s11
     DEG_PER_RAD = 180.0 / np.pi
-
     # --- Zielfunktion ---
     def goal_function(l):
         rho1 = Waveguide.line(l[0], 'mm') ** ref_standard_rho
@@ -400,10 +399,15 @@ def find_calibration_lengths(
         )
         cal.run()
         DUT = cal.apply_cal(ref_meas)
+        
+        
+        ratio = np.unwrap(np.unwrap(np.angle(ref_standard_rho.s.squeeze()),period=10*np.pi)-np.angle(DUT.s.squeeze()),period=10*np.pi) # / DUT
+        err = float(np.sum(ratio**2))
+        #phase_diff = np.unwrap(np.angle(ref_standard_rho.s.squeeze() / DUT.s.squeeze())) * DEG_PER_RAD
+        #err = float(np.sum(phase_diff**2))
+        #diff = ref_standard_rho.s.squeeze() / DUT.s.squeeze()
+        #err = float(np.sum(diff.real**2 + diff.imag**2))
 
-        ratio = ref_standard_rho / DUT
-        phase = np.unwrap(np.angle(ratio.s.squeeze())) * DEG_PER_RAD
-        err = float(np.sum(phase**2))
 
         if enhanced_console_output:
             print(f"l = {np.array(l)}, error = {err:.6g}")
@@ -433,9 +437,9 @@ def find_calibration_lengths(
     n = len(initial_guess)
 
     # --- Bounds-Default ---
-    if bounds is None and method in {"de", "de+nm"}:
+    if bounds is None and method in {"de", "de+nm","nm"}:
         bounds = [
-            (g * 0.5, g * 1.3) if g > 0 else (0, 20)
+            (g * 0.7, g * 1.3) if g > 0 else (0, 20)
             for g in initial_guess
         ]
 
@@ -492,6 +496,24 @@ def find_calibration_lengths(
 
     if enhanced_console_output:
         print(f"Final: x={result.x}, f={result.fun:.6g}")
+        
+        rho1 = Waveguide.line(result.x[0], 'mm') ** ref_standard_rho
+        rho2 = Waveguide.line(result.x[1], 'mm') ** ref_standard_rho
+        rho3 = Waveguide.line(result.x[2], 'mm') ** ref_standard_rho
+
+        cal = rf.calibration.OnePort(
+            measured=measured,
+            ideals=[rho1, rho2, rho3],
+        )
+        cal.run()
+        DUT = cal.apply_cal(ref_meas)
+        
+        plt.figure(figsize=(10, 6))
+        plt.title("Phase Comparison: Reference Standard vs. Optimized Calibrated DUT")
+        ref_standard_rho.plot_s_deg_unwrap(label="Reference Standard Rho")
+        DUT.plot_s_deg_unwrap(label="Calibrated DUT")
+        
+        plt.show()
 
     return result.x
 

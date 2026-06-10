@@ -77,7 +77,7 @@ cal = xBand_ECal(standard1=meas_short_1.s11, standard2=meas_short_2.s11, standar
                 sigma_NF=(0.000001**2)*np.ones(len(freq)), sigma_NT=(0.000025**2)*np.ones(len(freq)), sigma_L=(0.0012**2)*np.ones(len(freq)),
                 sigma_DD=(0.002**2)*np.ones(len(freq)), sigma_DT=(0.0125**2)*np.ones(len(freq)), sigma_DM=(0.025**2)*np.ones(len(freq)),
                 sigma_RR=(0.004**2)*np.ones(len(freq)), sigma_RT=(0.0000001**2)*np.ones(len(freq)), sigma_RM=(0.004**2)*np.ones(len(freq)),
-                sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=True, find_lengths_options="de+nm",
+                sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=True, find_lengths_options="nm",
                 enhanced_console_output=True,initial_guess=[3.75, 7.25 , 11.25], ref_standard=meas_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
 
 
@@ -99,6 +99,44 @@ ref_cal.run()
 dut_ref = ref_cal.apply_cal(match_std.s11)
 dut = cal.apply_cal(match_std.s11)
 
+#dut = rf.Network(s=munc.get_value(dut), frequency=freq)
+
+ref_up = rf.Network(s=((munc.get_value(dut_ref)) + munc.get_stdunc(dut_ref)), frequency=freq)
+ref_lo = rf.Network(s=((munc.get_value(dut_ref)) - munc.get_stdunc(dut_ref)), frequency=freq)
+
+dut_up = rf.Network(s=((munc.get_value(dut)) + munc.get_stdunc(dut)), frequency=freq)
+dut_lo = rf.Network(s=((munc.get_value(dut)) - munc.get_stdunc(dut)), frequency=freq)
+
+dut = rf.Network(s=munc.get_value(dut), frequency=freq)
+
+dut_ref = rf.Network(s=munc.get_value(dut_ref), frequency=freq)
+
+plt.figure(figsize=(6, 3))
+plt.plot(f, vector_error_magnitude(dut_ref, dut), label='Error Vector Magnitude (dB)')
+plt.hlines(-20, f[0], f[-1], colors='red', linestyles='dashed', label='-20 dB Threshold')
+plt.xlabel('Frequency (GHz)')
+plt.ylabel('Error Vector Magnitude (dB)')
+plt.xticks([8.5e9, 9.5e9, 10.5e9, 11.5e9, 12.5e9], ['8.5', '9.5', '10.5', '11.5', '12.5'])
+plt.tight_layout()
+plt.legend()
+plt.grid()
+plt.savefig('EVM.svg')
+plt.show()
+
+'''
+
+#dut_up.plot_s_smith(label='Calibrated $\sigma$', color='blue')
+#dut_lo.plot_s_smith(label='Calibrated $\sigma$', color='blue')
+
+dut.plot_s_db(label='Calibrated Mean', color='green')
+#dut_ref.plot_s_smith(label='Reference Mean', color='orange')
+
+ref_up.plot_s_db(label='$\sigma$ Reference', color='red')
+ref_lo.plot_s_db(label='$\sigma$ Reference', color='red')
+plt.tight_layout()
+plt.legend()
+plt.savefig('Smith.svg')
+plt.show()
 
 plt.figure(figsize=(6, 3))
 plt.plot(f,(20*np.log10(np.abs(munc.get_value(dut)))), label='Measured (Auto-Cal-Unit)', color='blue')
@@ -113,3 +151,4 @@ plt.grid()
 plt.tight_layout()
 plt.savefig('UNC.svg')
 plt.show()
+'''
