@@ -44,7 +44,7 @@ cal = xBand_ECal(standard1=meas_short_1.s11, standard2=meas_short_2.s11, standar
                 sigma_DD=(0.002**2)*np.ones(len(freq)), sigma_DT=(0.0125**2)*np.ones(len(freq)), sigma_DM=(0.025**2)*np.ones(len(freq)),
                 sigma_RR=(0.004**2)*np.ones(len(freq)), sigma_RT=(0.0000001**2)*np.ones(len(freq)), sigma_RM=(0.004**2)*np.ones(len(freq)),
                 sigma_SR=(0.05**2)*np.ones(len(freq)), find_lengths=False, find_lengths_options="de",
-                enhanced_console_output=True,initial_guess=[3.73036, 7.3369 , 11.3219821], ref_standard=meas_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
+                enhanced_console_output=True,initial_guess=[3.75, 7.5, 11.25], ref_standard=meas_short.s11, ref_standard_rho=WR90_short, Waveguide=WR90)
 
 cal.run()
 
@@ -53,10 +53,14 @@ cal.run()
 
 dut = cal.apply_cal(target.s11)
 
-
+plt.figure(figsize=(6, 3))
 dut = rf.Network(s=munc.get_value(dut), frequency=freq)
 target.plot_s_time(label="Uncalibrated")
 dut.plot_s_time(label="Calibrated")
+plt.ylabel('TDR S11')
 xlim = (0, 40)
+plt.grid()
+plt.tight_layout()
 plt.xlim(xlim)
+plt.savefig('Radar.svg')
 plt.show()
